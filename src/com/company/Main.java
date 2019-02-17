@@ -1,8 +1,15 @@
 package com.company;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import javax.swing.JFrame;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+
 
 
 public class Main extends JFrame{
@@ -18,7 +25,13 @@ public class Main extends JFrame{
     }
 
     public static void main(String[] args){
+        //create JFrame instance
         Main canvas = new Main(Main.SCREEN_WIDTH, Main.SCREEN_HEIGHT);
+
+        JButton button = new JButton("Add particle me");
+        button.setSize(300, 64);
+
+        JLabel infoLabel = new JLabel("out");
 
         Vector2D center = new Vector2D(Main.SCREEN_WIDTH /2 - 50, Main.SCREEN_HEIGHT / 2 - 50); // Radii of center of the screen
         Vector2D pivotPoint = new Vector2D(300, 300); // coordinate pivot point
@@ -27,16 +40,34 @@ public class Main extends JFrame{
         Particle par1 = new Particle(pivotPoint, delta, 10);
         Particle par_sun= new Particle(center,50, 10);
 
-        //add particles to canvas
-        // small particle
-        canvas.add(par1);
+        ArrayList<Particle> particles = new ArrayList<>();
+        particles.add(par1);
+        particles.add(new Particle(new Vector2D(250, 250), delta, 20));
+
+        // add button and label
+        canvas.add(button, BorderLayout.NORTH);
+        canvas.add(infoLabel, BorderLayout.SOUTH);
         canvas.revalidate();
+
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                particles.add(new Particle(new Vector2D(250,250), delta, 30));
+                canvas.add(particles.get(particles.size() - 1));
+                infoLabel.setText(Integer.toString(particles.size()));
+            }
+        });
+
+        //add particles to canvas
+        // small particles
+        for (int i = 0; i < particles.size(); i++){
+            canvas.add(particles.get(i));
+            canvas.revalidate();
+        }
 
         // solar particle
         canvas.add(par_sun);
         canvas.revalidate();
-
-
 
         // display movement of ball in timer
         Timer timer = new Timer();
@@ -47,31 +78,33 @@ public class Main extends JFrame{
 
             @Override
             public void run() {
-                if (par1.position.getX() < 0 || par1.position.getX() > Main.SCREEN_WIDTH - par1.radius){
-                    delta.setX(-delta.getX());
-                }else if (par1.position.getY() < 0 || par1.position.getY() > Main.SCREEN_WIDTH - par1.radius) {
-                    delta.setY(-delta.getY());
+                for (int i = 0; i < particles.size(); i++){
+                    if (particles.get(i).position.getX() < 0 || particles.get(i).position.getX() > Main.SCREEN_WIDTH - particles.get(i).radius){
+                        delta.setX(-delta.getX());
+                    }else if (particles.get(i).position.getY() < 0 || particles.get(i).position.getY() > Main.SCREEN_WIDTH - particles.get(i).radius) {
+                        delta.setY(-delta.getY());
+                    }
+
+                    particles.get(i).position = Vector2D.add(particles.get(i).position, particles.get(i).velocity);
+                    particles.get(i).revalidate();
+                    canvas.repaint();
+                    t += 1; // refresh time
+                    //
+                    // calculate radii between centers of particles
+                    deltaR = Vector2D.subsr(par_sun.position, particles.get(i).position);
+
+                    // calculate change of small particle velocity per snapshot
+                    deltaV = Vector2D.add(deltaV, Vector2D.multiplyOnScalar(deltaR, 1/ deltaR.module()));
+                    particles.get(i).velocity = Vector2D.add(particles.get(i).velocity, Vector2D.multiplyOnScalar(deltaR, par_sun.mass/ (deltaR.module() * deltaR.module())));
+
+                    System.out.println("\n X, Y:");
+                    System.out.println(particles.get(i).position.getX());
+                    System.out.println(particles.get(i).position.getY());
+                    System.out.println("\n time:");
+                    System.out.println(t);
+                    System.out.println("\n r12 length:");
+                    System.out.println(deltaR.module());
                 }
-
-                par1.position = Vector2D.add(par1.position, par1.velocity);
-                par1.revalidate();
-                canvas.repaint();
-                t += 1; // refresh time
-                //
-                // calculate radii between centers of particles
-                deltaR = Vector2D.subsr(par_sun.position, par1.position);
-
-                // calculate change of small particle velocity per snapshot
-                deltaV = Vector2D.add(deltaV, Vector2D.multiplyOnScalar(deltaR, 1/ deltaR.module()));
-                par1.velocity = Vector2D.add(par1.velocity, Vector2D.multiplyOnScalar(deltaR, par_sun.mass/ (deltaR.module() * deltaR.module())));
-
-                System.out.println("\n X, Y:");
-                System.out.println(par1.position.getX());
-                System.out.println(par1.position.getY());
-                System.out.println("\n time:");
-                System.out.println(t);
-                System.out.println("\n r12 length:");
-                System.out.println(deltaR.module());
             }
         }, 5, 5);
     }
